@@ -203,8 +203,8 @@ export default function ListaPrestamos({ clienteId }) {
   if (loading) return <p>Cargando préstamos...</p>;
 
   return (
-    <div className="flex gap-8">
-      <div className="flex-1">
+    <div className="space-y-8">
+      <div>
         <h2 className="text-xl font-semibold mb-3">Préstamos Activos</h2>
         {prestamosActivos.length === 0 ? (
           <p>No hay préstamos activos para este cliente.</p>
@@ -221,7 +221,7 @@ export default function ListaPrestamos({ clienteId }) {
                   className="border p-3 rounded bg-gray-50 flex flex-col gap-2"
                 >
                   {editandoId === p._id ? (
-                    <>
+                    <>    
                       <input
                         type="number"
                         step="0.01"
