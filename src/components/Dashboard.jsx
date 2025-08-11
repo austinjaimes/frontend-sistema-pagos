@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import NuevoCliente from "./NuevoCliente";
 import ClienteList from "./ClienteList";
 import ClienteDetalle from "./ClienteDetalle";
@@ -42,8 +42,7 @@ export default function Dashboard({ token, onLogout }) {
   // Estado para cliente seleccionado
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
 
-  // Función para obtener todos los datos necesarios para el dashboard
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -60,7 +59,6 @@ export default function Dashboard({ token, onLogout }) {
       let activosCount = 0;
       let totalPrestamos = 0;
 
-      // Calcular préstamos activos y total
       for (const cliente of clientes) {
         const resPrestamos = await fetch(`${API_BASE_URL}/prestamos/cliente/${cliente._id}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -69,7 +67,7 @@ export default function Dashboard({ token, onLogout }) {
         const prestamosCliente = await resPrestamos.json();
         const hoy = new Date();
 
-        prestamosCliente.forEach((p) => {
+        for (const p of prestamosCliente) {
           const inicio = new Date(p.fechaInicio);
           const finPrestamo = new Date(inicio);
           finPrestamo.setDate(finPrestamo.getDate() + p.dias);
@@ -77,7 +75,7 @@ export default function Dashboard({ token, onLogout }) {
             activosCount++;
             totalPrestamos += p.monto;
           }
-        });
+        }
       }
 
       setPrestamosActivos(activosCount);
@@ -87,21 +85,26 @@ export default function Dashboard({ token, onLogout }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     fetchData();
-  }, [token]);
+  }, [fetchData]);
 
-  // Actualiza datos después de crear o actualizar clientes o préstamos
-  const onPrestamoCreado = () => {
-    alert("Préstamo creado");
+  // Funciones para refrescar listado o actualizar datos al crear o eliminar
+  const refrescarDatosDashboard = () => {
     fetchData();
+    setPagina("Dashboard");
   };
 
   const onClienteCreado = () => {
     alert("Cliente creado");
-    fetchData();
+    refrescarDatosDashboard();
+  };
+
+  const onPrestamoCreado = () => {
+    alert("Préstamo creado");
+    fetchData(); // refrescar datos para actualizar UI
   };
 
   return (
@@ -115,12 +118,12 @@ export default function Dashboard({ token, onLogout }) {
         onLogout={onLogout}
       />
 
-      <main className="p-6 max-w-5xl mx-auto">
+      <main className="p-6 max-w-6xl mx-auto">
         {loading && <p>Cargando datos...</p>}
         {error && <p className="text-red-600">{error}</p>}
 
         {!loading && !error && pagina === "Dashboard" && (
-          <div className="p-6 bg-white rounded shadow-md max-w-2xl mx-auto">
+          <div className="p-6 bg-white rounded shadow-md max-w-4xl mx-auto">
             <h1 className="text-2xl font-bold mb-6 text-center">Dashboard</h1>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 text-center">
               <div className="p-4 border rounded bg-blue-100">
@@ -144,31 +147,22 @@ export default function Dashboard({ token, onLogout }) {
         )}
 
         {!loading && !error && pagina === "Lista Clientes" && (
-          <div className="flex gap-8">
-            <div className="flex-1">
-              <ClienteList onSelectCliente={setClienteSeleccionado} />
-            </div>
+          <div className="flex flex-col gap-6">
+            <ClienteList onSelectCliente={setClienteSeleccionado} />
 
-            <div className="flex-1">
-              {clienteSeleccionado ? (
-                <>
-                  <ClienteDetalle
-                    cliente={clienteSeleccionado}
-                    onClienteActualizado={(clienteActualizado) =>
-                      setClienteSeleccionado(clienteActualizado)
-                    }
-                    onClienteEliminado={() => setClienteSeleccionado(null)}
-                  />
-                  <NuevoPrestamo
-                    clienteId={clienteSeleccionado._id}
-                    onPrestamoCreado={onPrestamoCreado}
-                  />
-                  <ListaPrestamos clienteId={clienteSeleccionado._id} />
-                </>
-              ) : (
-                <p>Selecciona un cliente para ver detalles</p>
-              )}
-            </div>
+            {clienteSeleccionado ? (
+              <div className="mt-6">
+                <ClienteDetalle
+                  cliente={clienteSeleccionado}
+                  onClienteActualizado={(clienteActualizado) => setClienteSeleccionado(clienteActualizado)}
+                  onClienteEliminado={() => setClienteSeleccionado(null)}
+                />
+                <NuevoPrestamo clienteId={clienteSeleccionado._id} onPrestamoCreado={onPrestamoCreado} />
+                <ListaPrestamos clienteId={clienteSeleccionado._id} />
+              </div>
+            ) : (
+              <p>Selecciona un cliente para ver detalles</p>
+            )}
           </div>
         )}
       </main>
