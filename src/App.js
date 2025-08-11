@@ -1,25 +1,26 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from "react";
+import Auth from "./components/Auth";
+import Dashboard from "./components/Dashboard";
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+export default function App() {
+  const [token, setToken] = useState(null);
+
+  useEffect(() => {
+    const tokenGuardado = localStorage.getItem("token");
+    if (tokenGuardado) setToken(tokenGuardado);
+  }, []);
+
+  const handleLogin = (tokenRecibido) => {
+    localStorage.setItem("token", tokenRecibido);
+    setToken(tokenRecibido);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setToken(null);
+  };
+
+  if (!token) return <Auth onLogin={handleLogin} />;
+
+  return <Dashboard onLogout={handleLogout} token={token} />;
 }
-
-export default App;
