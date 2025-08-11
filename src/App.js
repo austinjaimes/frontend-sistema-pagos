@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Auth from "./components/Auth";
 import Dashboard from "./components/Dashboard";
-import NewDashboard from "./components/NewDashboard";
 
 export default function App() {
   const [token, setToken] = useState(null);
