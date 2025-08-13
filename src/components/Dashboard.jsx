@@ -39,6 +39,10 @@ export default function Dashboard({ token, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // NUEVO: estado para clientes con pago hoy
+  const [clientesPagoHoy, setClientesPagoHoy] = useState([]);
+  const [clientesSinPagoHoy, setClientesSinPagoHoy] = useState([]);
+
   // Estado para cliente seleccionado
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
 
@@ -54,17 +58,26 @@ export default function Dashboard({ token, onLogout }) {
       });
       if (!resClientes.ok) throw new Error("Error al cargar clientes");
       const clientes = await resClientes.json();
+
+      if (!Array.isArray(clientes))
+        throw new Error("Datos inválidos: clientes no es un arreglo");
+
       setNumClientes(clientes.length);
 
       let activosCount = 0;
       let totalPrestamos = 0;
 
       for (const cliente of clientes) {
-        const resPrestamos = await fetch(`${API_BASE_URL}/prestamos/cliente/${cliente._id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const resPrestamos = await fetch(
+          `${API_BASE_URL}/prestamos/cliente/${cliente._id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         if (!resPrestamos.ok) continue;
         const prestamosCliente = await resPrestamos.json();
+        if (!Array.isArray(prestamosCliente)) continue;
+
         const hoy = new Date();
 
         for (const p of prestamosCliente) {
@@ -73,15 +86,40 @@ export default function Dashboard({ token, onLogout }) {
           finPrestamo.setDate(finPrestamo.getDate() + p.dias);
           if (hoy < finPrestamo) {
             activosCount++;
-            totalPrestamos += p.monto;
+            totalPrestamos += p.monto || 0;
           }
         }
       }
 
       setPrestamosActivos(activosCount);
       setDineroTotal(totalPrestamos);
+
+      // Obtener clientes por pago hoy
+      const resPagoHoy = await fetch(`${API_BASE_URL}/clientes/pagoHoy`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!resPagoHoy.ok)
+        throw new Error("Error al cargar estado de pagos de hoy");
+      const pagoHoyData = await resPagoHoy.json();
+
+      // Ajuste de nombres según backend
+      setClientesPagoHoy(
+        Array.isArray(pagoHoyData.clientesPagaronHoy)
+          ? pagoHoyData.clientesPagaronHoy
+          : []
+      );
+      setClientesSinPagoHoy(
+        Array.isArray(pagoHoyData.clientesNoPagaronHoy)
+          ? pagoHoyData.clientesNoPagaronHoy
+          : []
+      );
     } catch (err) {
       setError(err.message);
+      setNumClientes(0);
+      setPrestamosActivos(0);
+      setDineroTotal(0);
+      setClientesPagoHoy([]);
+      setClientesSinPagoHoy([]);
     } finally {
       setLoading(false);
     }
@@ -125,18 +163,64 @@ export default function Dashboard({ token, onLogout }) {
         {!loading && !error && pagina === "Dashboard" && (
           <div className="p-6 bg-white rounded shadow-md max-w-4xl mx-auto">
             <h1 className="text-2xl font-bold mb-6 text-center">Dashboard</h1>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 text-center">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 text-center mb-8">
               <div className="p-4 border rounded bg-blue-100">
                 <h2 className="text-lg font-semibold">Préstamos activos</h2>
                 <p className="text-3xl font-bold">{prestamosActivos}</p>
               </div>
               <div className="p-4 border rounded bg-green-100">
                 <h2 className="text-lg font-semibold">Dinero total prestado</h2>
-                <p className="text-3xl font-bold">${dineroTotal.toFixed(2)}</p>
+                <p className="text-3xl font-bold">
+                  ${dineroTotal.toFixed(2)}
+                </p>
               </div>
               <div className="p-4 border rounded bg-yellow-100">
                 <h2 className="text-lg font-semibold">Número de clientes</h2>
                 <p className="text-3xl font-bold">{numClientes}</p>
+              </div>
+            </div>
+
+            {/* Sección clientes que pagaron hoy */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="p-4 border rounded bg-green-50">
+                <h2 className="text-xl font-semibold mb-2 text-center text-green-700">
+                  Clientes que pagaron hoy ({clientesPagoHoy.length})
+                </h2>
+                {clientesPagoHoy.length === 0 ? (
+                  <p className="text-center">Ningún cliente ha pagado hoy.</p>
+                ) : (
+                  <ul className="list-disc list-inside max-h-48 overflow-auto">
+                    {clientesPagoHoy.map((cliente) => (
+                      <li
+                        key={cliente._id}
+                        className="truncate"
+                        title={cliente.nombre}
+                      >
+                        {cliente.nombre}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="p-4 border rounded bg-red-50">
+                <h2 className="text-xl font-semibold mb-2 text-center text-red-700">
+                  Clientes sin pago hoy ({clientesSinPagoHoy.length})
+                </h2>
+                {clientesSinPagoHoy.length === 0 ? (
+                  <p className="text-center">Todos los clientes han pagado hoy.</p>
+                ) : (
+                  <ul className="list-disc list-inside max-h-48 overflow-auto">
+                    {clientesSinPagoHoy.map((cliente) => (
+                      <li
+                        key={cliente._id}
+                        className="truncate"
+                        title={cliente.nombre}
+                      >
+                        {cliente.nombre}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           </div>
@@ -154,10 +238,15 @@ export default function Dashboard({ token, onLogout }) {
               <div className="mt-6">
                 <ClienteDetalle
                   cliente={clienteSeleccionado}
-                  onClienteActualizado={(clienteActualizado) => setClienteSeleccionado(clienteActualizado)}
+                  onClienteActualizado={(clienteActualizado) =>
+                    setClienteSeleccionado(clienteActualizado)
+                  }
                   onClienteEliminado={() => setClienteSeleccionado(null)}
                 />
-                <NuevoPrestamo clienteId={clienteSeleccionado._id} onPrestamoCreado={onPrestamoCreado} />
+                <NuevoPrestamo
+                  clienteId={clienteSeleccionado._id}
+                  onPrestamoCreado={onPrestamoCreado}
+                />
                 <ListaPrestamos clienteId={clienteSeleccionado._id} />
               </div>
             ) : (

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 
 const API_BASE_URL = "https://backend-sistema-prestamos-production.up.railway.app/api";
-
 export default function ClienteList({ onSelectCliente }) {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
