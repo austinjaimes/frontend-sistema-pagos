@@ -77,6 +77,7 @@ export default function ListaPrestamos({ clienteId }) {
 
   useEffect(() => {
     obtenerPrestamos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clienteId]);
 
   // Función para normalizar fechas a inicio de día
@@ -104,35 +105,35 @@ export default function ListaPrestamos({ clienteId }) {
   });
 
   // Cambiar estado cobradoHoy en préstamo
-  const handleCobradoHoyChange = async (prestamoId, valor) => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("No autorizado.");
+  // const handleCobradoHoyChange = async (prestamoId, valor) => {
+  //   try {
+  //     const token = localStorage.getItem("token");
+  //     if (!token) throw new Error("No autorizado.");
 
-      const prestamo = prestamos.find((p) => p._id === prestamoId);
-      if (!prestamo) return;
+  //     const prestamo = prestamos.find((p) => p._id === prestamoId);
+  //     if (!prestamo) return;
 
-      const res = await fetch(`${API_BASE_URL}/prestamos/${prestamoId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ ...prestamo, cobradoHoy: valor }),
-      });
+  //     const res = await fetch(`${API_BASE_URL}/prestamos/${prestamoId}`, {
+  //       method: "PUT",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //       body: JSON.stringify({ ...prestamo, cobradoHoy: valor }),
+  //     });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.msg || err.error || "Error al actualizar préstamo");
-      }
+  //     if (!res.ok) {
+  //       const err = await res.json().catch(() => ({}));
+  //       throw new Error(err.msg || err.error || "Error al actualizar préstamo");
+  //     }
 
-      setPrestamos((prev) =>
-        prev.map((p) => (p._id === prestamoId ? { ...p, cobradoHoy: valor } : p))
-      );
-    } catch (error) {
-      alert(error.message);
-    }
-  };
+  //     setPrestamos((prev) =>
+  //       prev.map((p) => (p._id === prestamoId ? { ...p, cobradoHoy: valor } : p))
+  //     );
+  //   } catch (error) {
+  //     alert(error.message);
+  //   }
+  // };
 
   // Abonar una cantidad al préstamo
   const handleAbonar = async (prestamoId) => {
@@ -400,74 +401,74 @@ export default function ListaPrestamos({ clienteId }) {
   };
 
   // Marcar o desmarcar pago de día específico
-  const togglePagoDia = async (prestamoId, diaIndex) => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("No autorizado.");
-      return;
-    }
+  // const togglePagoDia = async (prestamoId, diaIndex) => {
+  //   const token = localStorage.getItem("token");
+  //   if (!token) {
+  //     alert("No autorizado.");
+  //     return;
+  //   }
 
-    const pagadoActual = historialCobros[prestamoId]?.[diaIndex] || false;
+  //   const pagadoActual = historialCobros[prestamoId]?.[diaIndex] || false;
 
-    try {
-      // Cambiar estado pago día en backend
-      const res = await fetch(`${API_BASE_URL}/prestamos/${prestamoId}/pago/${diaIndex + 1}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ pagado: !pagadoActual }),
-      });
+  //   try {
+  //     // Cambiar estado pago día en backend
+  //     const res = await fetch(`${API_BASE_URL}/prestamos/${prestamoId}/pago/${diaIndex + 1}`, {
+  //       method: "PUT",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //       body: JSON.stringify({ pagado: !pagadoActual }),
+  //     });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.msg || err.error || "Error al actualizar pago diario");
-      }
+  //     if (!res.ok) {
+  //       const err = await res.json().catch(() => ({}));
+  //       throw new Error(err.msg || err.error || "Error al actualizar pago diario");
+  //     }
 
-      // Obtener el préstamo actualizado para tener historial actualizado
-      const resPrestamo = await fetch(`${API_BASE_URL}/prestamos/${prestamoId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!resPrestamo.ok) {
-        throw new Error("No se pudo actualizar el historial después del cambio");
-      }
-      const prestamoActualizado = await resPrestamo.json();
+  //     // Obtener el préstamo actualizado para tener historial actualizado
+  //     const resPrestamo = await fetch(`${API_BASE_URL}/prestamos/${prestamoId}`, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
+  //     if (!resPrestamo.ok) {
+  //       throw new Error("No se pudo actualizar el historial después del cambio");
+  //     }
+  //     const prestamoActualizado = await resPrestamo.json();
 
-      // Actualizar historial local con datos del backend
-      setHistorialCobros((prev) => ({
-        ...prev,
-        [prestamoId]: prestamoActualizado.historialPagos || [],
-      }));
+  //     // Actualizar historial local con datos del backend
+  //     setHistorialCobros((prev) => ({
+  //       ...prev,
+  //       [prestamoId]: prestamoActualizado.historialPagos || [],
+  //     }));
 
-      // Actualizar préstamos para reflejar monto recuperado actualizado
-      setPrestamos((prev) =>
-        prev.map((p) =>
-          p._id === prestamoId
-            ? {
-                ...p,
-                montoRecuperado: prestamoActualizado.montoRecuperado || p.montoRecuperado,
-                historialPagos: prestamoActualizado.historialPagos || p.historialPagos,
-              }
-            : p
-        )
-      );
-    } catch (error) {
-      alert(error.message);
-    }
-  };
+  //     // Actualizar préstamos para reflejar monto recuperado actualizado
+  //     setPrestamos((prev) =>
+  //       prev.map((p) =>
+  //         p._id === prestamoId
+  //           ? {
+  //               ...p,
+  //               montoRecuperado: prestamoActualizado.montoRecuperado || p.montoRecuperado,
+  //               historialPagos: prestamoActualizado.historialPagos || p.historialPagos,
+  //             }
+  //           : p
+  //       )
+  //     );
+  //   } catch (error) {
+  //     alert(error.message);
+  //   }
+  // };
 
   // Generar array de fechas para mostrar en historial (del préstamo)
-  const generarFechasHistorial = (fechaInicio, plazo) => {
-    const fechas = [];
-    const inicio = soloFecha(new Date(fechaInicio));
-    for (let i = 0; i < plazo; i++) {
-      const fecha = new Date(inicio);
-      fecha.setDate(fecha.getDate() + i);
-      fechas.push(fecha.toLocaleDateString());
-    }
-    return fechas;
-  };
+  // const generarFechasHistorial = (fechaInicio, plazo) => {
+  //   const fechas = [];
+  //   const inicio = soloFecha(new Date(fechaInicio));
+  //   for (let i = 0; i < plazo; i++) {
+  //     const fecha = new Date(inicio);
+  //     fecha.setDate(fecha.getDate() + i);
+  //     fechas.push(fecha.toLocaleDateString());
+  //   }
+  //   return fechas;
+  // };
 
   // Renderizado principal
 // Renderizado principal
@@ -505,7 +506,7 @@ return (
 
             const plazo = p.diasTotales ?? p.dias;
             const pagosHechos = p.historialPagos?.filter(Boolean).length ?? 0;
-            const diasRestantes = Math.max(0, plazo - pagosHechos);
+            // const diasRestantes = Math.max(0, plazo - pagosHechos);
             const dineroRestante = Math.max(0, montoFinal - montoRecuperado);
 
             const isEditing = editandoId === p._id;
