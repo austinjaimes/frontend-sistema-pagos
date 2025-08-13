@@ -505,7 +505,7 @@ return (
             const montoFinal = p.montoFinal ?? montoInicial;
 
             const plazo = p.diasTotales ?? p.dias;
-            const pagosHechos = p.historialPagos?.filter(Boolean).length ?? 0;
+            // const pagosHechos = p.historialPagos?.filter(Boolean).length ?? 0;
             // const diasRestantes = Math.max(0, plazo - pagosHechos);
             const dineroRestante = Math.max(0, montoFinal - montoRecuperado);
 
