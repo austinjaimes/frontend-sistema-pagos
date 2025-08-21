@@ -39,11 +39,11 @@ export default function Dashboard({ token, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // NUEVO: estado para clientes con pago hoy
+  // NUEVOS ESTADOS
   const [clientesPagoHoy, setClientesPagoHoy] = useState([]);
   const [clientesSinPagoHoy, setClientesSinPagoHoy] = useState([]);
-
-  // Estado para cliente seleccionado
+  const [prestamosHoy, setPrestamosHoy] = useState([]);
+  const [prestamosSemana, setPrestamosSemana] = useState([]);
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
 
   const fetchData = useCallback(async () => {
@@ -58,7 +58,6 @@ export default function Dashboard({ token, onLogout }) {
       });
       if (!resClientes.ok) throw new Error("Error al cargar clientes");
       const clientes = await resClientes.json();
-
       if (!Array.isArray(clientes))
         throw new Error("Datos inválidos: clientes no es un arreglo");
 
@@ -70,9 +69,7 @@ export default function Dashboard({ token, onLogout }) {
       for (const cliente of clientes) {
         const resPrestamos = await fetch(
           `${API_BASE_URL}/prestamos/cliente/${cliente._id}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         if (!resPrestamos.ok) continue;
         const prestamosCliente = await resPrestamos.json();
@@ -101,8 +98,6 @@ export default function Dashboard({ token, onLogout }) {
       if (!resPagoHoy.ok)
         throw new Error("Error al cargar estado de pagos de hoy");
       const pagoHoyData = await resPagoHoy.json();
-
-      // Ajuste de nombres según backend
       setClientesPagoHoy(
         Array.isArray(pagoHoyData.clientesPagaronHoy)
           ? pagoHoyData.clientesPagaronHoy
@@ -113,6 +108,16 @@ export default function Dashboard({ token, onLogout }) {
           ? pagoHoyData.clientesNoPagaronHoy
           : []
       );
+
+      // NUEVO: obtener préstamos que terminan hoy y esta semana
+      const resVencer = await fetch(`${API_BASE_URL}/prestamos/porVencer`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (resVencer.ok) {
+        const dataVencer = await resVencer.json();
+        setPrestamosHoy(dataVencer.terminanHoy || []);
+        setPrestamosSemana(dataVencer.terminanSemana || []);
+      }
     } catch (err) {
       setError(err.message);
       setNumClientes(0);
@@ -120,6 +125,8 @@ export default function Dashboard({ token, onLogout }) {
       setDineroTotal(0);
       setClientesPagoHoy([]);
       setClientesSinPagoHoy([]);
+      setPrestamosHoy([]);
+      setPrestamosSemana([]);
     } finally {
       setLoading(false);
     }
@@ -129,7 +136,6 @@ export default function Dashboard({ token, onLogout }) {
     fetchData();
   }, [fetchData]);
 
-  // Funciones para refrescar listado o actualizar datos al crear o eliminar
   const refrescarDatosDashboard = () => {
     fetchData();
     setPagina("Dashboard");
@@ -142,7 +148,7 @@ export default function Dashboard({ token, onLogout }) {
 
   const onPrestamoCreado = () => {
     alert("Préstamo creado");
-    fetchData(); // refrescar datos para actualizar UI
+    fetchData();
   };
 
   return (
@@ -163,6 +169,8 @@ export default function Dashboard({ token, onLogout }) {
         {!loading && !error && pagina === "Dashboard" && (
           <div className="p-6 bg-white rounded shadow-md max-w-4xl mx-auto">
             <h1 className="text-2xl font-bold mb-6 text-center">Dashboard</h1>
+
+            {/* Tarjetas resumen */}
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 text-center mb-8">
               <div className="p-4 border rounded bg-blue-100">
                 <h2 className="text-lg font-semibold">Préstamos activos</h2>
@@ -170,9 +178,7 @@ export default function Dashboard({ token, onLogout }) {
               </div>
               <div className="p-4 border rounded bg-green-100">
                 <h2 className="text-lg font-semibold">Dinero total prestado</h2>
-                <p className="text-3xl font-bold">
-                  ${dineroTotal.toFixed(2)}
-                </p>
+                <p className="text-3xl font-bold">${dineroTotal.toFixed(2)}</p>
               </div>
               <div className="p-4 border rounded bg-yellow-100">
                 <h2 className="text-lg font-semibold">Número de clientes</h2>
@@ -180,8 +186,8 @@ export default function Dashboard({ token, onLogout }) {
               </div>
             </div>
 
-            {/* Sección clientes que pagaron hoy */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Clientes que pagaron / no pagaron hoy */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
               <div className="p-4 border rounded bg-green-50">
                 <h2 className="text-xl font-semibold mb-2 text-center text-green-700">
                   Clientes que pagaron hoy ({clientesPagoHoy.length})
@@ -191,11 +197,7 @@ export default function Dashboard({ token, onLogout }) {
                 ) : (
                   <ul className="list-disc list-inside max-h-48 overflow-auto">
                     {clientesPagoHoy.map((cliente) => (
-                      <li
-                        key={cliente._id}
-                        className="truncate"
-                        title={cliente.nombre}
-                      >
+                      <li key={cliente._id} className="truncate" title={cliente.nombre}>
                         {cliente.nombre}
                       </li>
                     ))}
@@ -211,11 +213,7 @@ export default function Dashboard({ token, onLogout }) {
                 ) : (
                   <ul className="list-disc list-inside max-h-48 overflow-auto">
                     {clientesSinPagoHoy.map((cliente) => (
-                      <li
-                        key={cliente._id}
-                        className="truncate"
-                        title={cliente.nombre}
-                      >
+                      <li key={cliente._id} className="truncate" title={cliente.nombre}>
                         {cliente.nombre}
                       </li>
                     ))}
@@ -223,6 +221,45 @@ export default function Dashboard({ token, onLogout }) {
                 )}
               </div>
             </div>
+
+            {/* Préstamos que terminan hoy
+            <div className="mb-6 p-4 border rounded bg-purple-50">
+              <h2 className="text-xl font-semibold mb-2 text-purple-700">
+                Préstamos que terminan hoy ({prestamosHoy.length})
+              </h2>
+              {prestamosHoy.length === 0 ? (
+                <p className="text-center">Ningún préstamo termina hoy.</p>
+              ) : (
+                <ul className="list-disc list-inside max-h-48 overflow-auto">
+                  {prestamosHoy.map((p) => (
+  <li key={p._id}>
+  Cliente: {p.clienteId?.nombre}, Monto: ${p.monto.toFixed(2)}
+</li>
+))}
+                </ul>
+              )}
+            </div> */}
+
+            {/* Préstamos que terminan esta semana */}
+            {/* Préstamos que terminan esta semana */}
+<div className="mb-6 p-4 border rounded bg-indigo-50">
+  <h2 className="text-xl font-semibold mb-2 text-indigo-700">
+    Préstamos que terminan esta semana ({prestamosSemana.length})
+  </h2>
+  {prestamosSemana.length === 0 ? (
+    <p className="text-center">Ningún préstamo termina esta semana.</p>
+  ) : (
+    <ul className="list-disc list-inside max-h-48 overflow-auto">
+      {prestamosSemana.map((p) => (
+        <li key={p._id}>
+          Cliente: {p.cliente?.nombre}, Monto: ${p.monto.toFixed(2)}, 
+          Fecha de terminación: {new Date(p.fechaTerminacion).toLocaleDateString()}
+        </li>
+      ))}
+    </ul>
+  )}
+</div>
+
           </div>
         )}
 
@@ -233,7 +270,6 @@ export default function Dashboard({ token, onLogout }) {
         {!loading && !error && pagina === "Lista Clientes" && (
           <div className="flex flex-col gap-6">
             <ClienteList onSelectCliente={setClienteSeleccionado} />
-
             {clienteSeleccionado ? (
               <div className="mt-6">
                 <ClienteDetalle

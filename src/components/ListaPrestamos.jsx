@@ -611,7 +611,7 @@ return (
                           />
                         </div>
 
-                        <div>
+                        {/* <div>
                           <label className="block text-sm font-medium text-gray-700">Fecha Inicio</label>
                           <input
                             type="date"
@@ -620,9 +620,9 @@ return (
                             onChange={handleChange}
                             className="border rounded p-1 w-full"
                           />
-                        </div>
+                        </div> */}
 
-                        {/* <div>
+                        {/* { <div>
                           <label className="block text-sm font-medium text-gray-700">Plazo (días)</label>
                           <input
                             type="number"
@@ -632,7 +632,7 @@ return (
                             className="border rounded p-1 w-full"
                             min={1}
                           />
-                        </div> */}
+                        </div> } */}
 
                         {/* <div className="flex items-center mt-6">
                           <input
