@@ -1,3 +1,4 @@
+// Dashboard.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import NuevoCliente from "./NuevoCliente";
 import ClienteList from "./ClienteList";
@@ -44,6 +45,7 @@ export default function Dashboard({ token, onLogout }) {
   const [clientesSinPagoHoy, setClientesSinPagoHoy] = useState([]);
   const [prestamosHoy, setPrestamosHoy] = useState([]);
   const [prestamosSemana, setPrestamosSemana] = useState([]);
+  const [clientesRetrasados, setClientesRetrasados] = useState([]);
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
 
   const fetchData = useCallback(async () => {
@@ -58,10 +60,7 @@ export default function Dashboard({ token, onLogout }) {
       });
       if (!resClientes.ok) throw new Error("Error al cargar clientes");
       const clientes = await resClientes.json();
-      if (!Array.isArray(clientes))
-        throw new Error("Datos inválidos: clientes no es un arreglo");
-
-      setNumClientes(clientes.length);
+      setNumClientes(Array.isArray(clientes) ? clientes.length : 0);
 
       let activosCount = 0;
       let totalPrestamos = 0;
@@ -95,8 +94,6 @@ export default function Dashboard({ token, onLogout }) {
       const resPagoHoy = await fetch(`${API_BASE_URL}/clientes/pagoHoy`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!resPagoHoy.ok)
-        throw new Error("Error al cargar estado de pagos de hoy");
       const pagoHoyData = await resPagoHoy.json();
       setClientesPagoHoy(
         Array.isArray(pagoHoyData.clientesPagaronHoy)
@@ -109,7 +106,7 @@ export default function Dashboard({ token, onLogout }) {
           : []
       );
 
-      // NUEVO: obtener préstamos que terminan hoy y esta semana
+      // Obtener préstamos que terminan hoy y esta semana + retrasos
       const resVencer = await fetch(`${API_BASE_URL}/prestamos/porVencer`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -117,6 +114,7 @@ export default function Dashboard({ token, onLogout }) {
         const dataVencer = await resVencer.json();
         setPrestamosHoy(dataVencer.terminanHoy || []);
         setPrestamosSemana(dataVencer.terminanSemana || []);
+        setClientesRetrasados(dataVencer.clientesRetrasados || []);
       }
     } catch (err) {
       setError(err.message);
@@ -127,6 +125,7 @@ export default function Dashboard({ token, onLogout }) {
       setClientesSinPagoHoy([]);
       setPrestamosHoy([]);
       setPrestamosSemana([]);
+      setClientesRetrasados([]);
     } finally {
       setLoading(false);
     }
@@ -222,43 +221,42 @@ export default function Dashboard({ token, onLogout }) {
               </div>
             </div>
 
-            {/* Préstamos que terminan hoy
-            <div className="mb-6 p-4 border rounded bg-purple-50">
-              <h2 className="text-xl font-semibold mb-2 text-purple-700">
-                Préstamos que terminan hoy ({prestamosHoy.length})
+            {/* Préstamos que terminan esta semana */}
+            <div className="mb-6 p-4 border rounded bg-indigo-50">
+              <h2 className="text-xl font-semibold mb-2 text-indigo-700">
+                Préstamos que terminan esta semana ({prestamosSemana.length})
               </h2>
-              {prestamosHoy.length === 0 ? (
-                <p className="text-center">Ningún préstamo termina hoy.</p>
+              {prestamosSemana.length === 0 ? (
+                <p className="text-center">Ningún préstamo termina esta semana.</p>
               ) : (
                 <ul className="list-disc list-inside max-h-48 overflow-auto">
-                  {prestamosHoy.map((p) => (
-  <li key={p._id}>
-  Cliente: {p.clienteId?.nombre}, Monto: ${p.monto.toFixed(2)}
-</li>
-))}
+                  {prestamosSemana.map((p) => (
+                    <li key={p._id}>
+                      Cliente: {p.cliente?.nombre}, Monto: ${p.monto.toFixed(2)}, 
+                      Fecha de terminación: {new Date(p.fechaTerminacion).toLocaleDateString()}
+                    </li>
+                  ))}
                 </ul>
               )}
-            </div> */}
+            </div>
 
-            {/* Préstamos que terminan esta semana */}
-            {/* Préstamos que terminan esta semana */}
-<div className="mb-6 p-4 border rounded bg-indigo-50">
-  <h2 className="text-xl font-semibold mb-2 text-indigo-700">
-    Préstamos que terminan esta semana ({prestamosSemana.length})
-  </h2>
-  {prestamosSemana.length === 0 ? (
-    <p className="text-center">Ningún préstamo termina esta semana.</p>
-  ) : (
-    <ul className="list-disc list-inside max-h-48 overflow-auto">
-      {prestamosSemana.map((p) => (
-        <li key={p._id}>
-          Cliente: {p.cliente?.nombre}, Monto: ${p.monto.toFixed(2)}, 
-          Fecha de terminación: {new Date(p.fechaTerminacion).toLocaleDateString()}
-        </li>
-      ))}
-    </ul>
-  )}
-</div>
+            {/* Clientes con pagos retrasados */}
+            <div className="mb-6 p-4 border rounded bg-red-100">
+              <h2 className="text-xl font-semibold mb-2 text-red-700">
+                Clientes con pagos retrasados ({clientesRetrasados.length})
+              </h2>
+              {clientesRetrasados.length === 0 ? (
+                <p className="text-center">Ningún cliente tiene pagos retrasados.</p>
+              ) : (
+                <ul className="list-disc list-inside max-h-48 overflow-auto">
+                  {clientesRetrasados.map((c, idx) => (
+                    <li key={idx}>
+                      {c.nombre} - {c.retrasos} pago(s) atrasado(s), monto atrasado: ${c.montoAtrasado.toFixed(2)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
           </div>
         )}

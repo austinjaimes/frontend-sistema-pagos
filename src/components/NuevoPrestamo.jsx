@@ -1,11 +1,13 @@
 import React, { useState } from "react";
+import dayjs from "dayjs";
 
 const API_BASE_URL = "https://backend-sistema-prestamos-production.up.railway.app/api";
 
 export default function NuevoPrestamo({ clienteId, onPrestamoCreado }) {
+  const hoy = dayjs().format("YYYY-MM-DD"); // fecha de hoy
   const [monto, setMonto] = useState("");
   const [interesMensual, setInteresMensual] = useState("");
-  const [fechaInicio, setFechaInicio] = useState("");
+  const [fechaInicio, setFechaInicio] = useState(hoy); // por defecto hoy
   const [dias, setDias] = useState("");
 
   async function handleSubmit(e) {
@@ -44,7 +46,7 @@ export default function NuevoPrestamo({ clienteId, onPrestamoCreado }) {
       // Limpiar campos
       setMonto("");
       setInteresMensual("");
-      setFechaInicio("");
+      setFechaInicio(hoy); // reiniciar a hoy
       setDias("");
     } catch (error) {
       alert(error.message);
